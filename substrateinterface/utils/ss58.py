@@ -1,6 +1,6 @@
 # Python Substrate Interface
 #
-# Copyright 2018-2019 openAware BV (NL).
+# Copyright 2018-2020 openAware BV (NL).
 # This file is part of Polkascan.
 #
 # Polkascan is free software: you can redistribute it and/or modify
@@ -29,12 +29,23 @@ from scalecodec import ScaleBytes
 from scalecodec.types import U8, U16, U32, U64
 
 
-def ss58_decode(address, valid_address_type=42):
+def ss58_decode(address, valid_address_type=None):
+    """
+    Decodes given SS58 encoded address to an account ID
+    Parameters
+    ----------
+    address: e.g. EaG2CRhJWPb7qmdcJvy3LiWdh26Jreu9Dx6R1rXxPmYXoDk
+    valid_address_type
+
+    Returns
+    -------
+    Decoded string AccountId
+    """
     checksum_prefix = b'SS58PRE'
 
     ss58_format = base58.b58decode(address)
 
-    if ss58_format[0] != valid_address_type:
+    if valid_address_type and ss58_format[0] != valid_address_type:
         raise ValueError("Invalid Address type")
 
     # Determine checksum length according to length of address string
@@ -66,12 +77,24 @@ def ss58_decode(address, valid_address_type=42):
 
 
 def ss58_encode(address, address_type=42):
+    """
+    Encodes an account ID to an Substrate address according to provided address_type
+
+    Parameters
+    ----------
+    address
+    address_type
+
+    Returns
+    -------
+
+    """
     checksum_prefix = b'SS58PRE'
 
     if type(address) is bytes or type(address) is bytearray:
         address_bytes = address
     else:
-        address_bytes = bytes.fromhex(address)
+        address_bytes = bytes.fromhex(address.replace('0x', ''))
 
     if len(address_bytes) == 32:
         # Checksum size is 2 bytes for public key
@@ -89,6 +112,18 @@ def ss58_encode(address, address_type=42):
 
 
 def ss58_encode_account_index(account_index, address_type=42):
+    """
+    Encodes an AccountIndex to an Substrate address according to provided address_type
+
+    Parameters
+    ----------
+    account_index
+    address_type
+
+    Returns
+    -------
+
+    """
 
     if 0 <= account_index <= 2**8 - 1:
         account_idx_encoder = U8()
@@ -105,7 +140,18 @@ def ss58_encode_account_index(account_index, address_type=42):
 
 
 def ss58_decode_account_index(address, valid_address_type=42):
+    """
+    Decodes given SS58 encoded address to an AccountIndex
 
+    Parameters
+    ----------
+    address
+    valid_address_type
+
+    Returns
+    -------
+    Decoded int AccountIndex
+    """
     account_index_bytes = ss58_decode(address, valid_address_type)
 
     if len(account_index_bytes) == 2:

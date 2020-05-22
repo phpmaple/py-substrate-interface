@@ -7,12 +7,25 @@ https://github.com/pypa/sampleproject
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-from os import path
+from os import path, environ
 # io.open is needed for projects that support Python 2.7
 # It ensures open() defaults to text mode with universal newlines,
 # and accepts an argument to specify the text encoding
 # Python 3 only projects can skip this import
 from io import open
+
+if environ.get('TRAVIS_TAG'):
+    version = environ['TRAVIS_TAG'].replace('v', '')
+elif environ.get('CI_COMMIT_TAG'):
+    version = environ['CI_COMMIT_TAG'].replace('v', '')
+elif environ.get('GITHUB_REF'):
+
+    if not environ['GITHUB_REF'].startswith('refs/tags/v'):
+        raise ValueError('Incorrect tag format {}'.format(environ['GITHUB_REF']))
+
+    version = environ['GITHUB_REF'].replace('refs/tags/v', '')
+else:
+    raise ValueError('Missing commit tag, can\'t set version')
 
 here = path.abspath(path.dirname(__file__))
 
@@ -35,7 +48,7 @@ setup(
     # There are some restrictions on what makes a valid project name
     # specification here:
     # https://packaging.python.org/specifications/core-metadata/#name
-    name='substrateinterface',  # Required
+    name='substrate-interface',  # Required
 
     # Versions should comply with PEP 440:
     # https://www.python.org/dev/peps/pep-0440/
@@ -43,7 +56,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0',  # Required
+    version=version,  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -94,7 +107,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
@@ -107,8 +120,6 @@ setup(
         # These classifiers are *not* checked by 'pip install'. See instead
         # 'python_requires' below.
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
@@ -138,7 +149,7 @@ setup(
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
 
     #python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4',
-    python_requires='>=3, <4',
+    python_requires='>=3.6, <4',
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -146,8 +157,21 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['requests', 'urllib3', 'xxhash==1.3.0',
+    install_requires=[
+        'asyncio==3.4.3',
+        'websockets==8.1',
+        'base58==1.0.3',
+        'certifi==2019.6.16',
+        'chardet==3.0.4',
+        'docker==4.2.0',
+        'idna==2.8',
+        'requests==2.22.0',
+        'urllib3==1.25.3',
+        'xxhash==1.3.0',
                       'scalecodec@https://github.com/phpmaple/py-scale-codec/tarball/master#egg=scalecodec'],
+        'py-sr25519-bindings>=0.1.1',
+        'py-bip39-bindings>=0.1.2'
+    ],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"

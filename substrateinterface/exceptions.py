@@ -1,6 +1,6 @@
 # Python Substrate Interface
 #
-# Copyright 2018-2019 openAware BV (NL).
+# Copyright 2018-2020 openAware BV (NL).
 # This file is part of Polkascan.
 #
 # Polkascan is free software: you can redistribute it and/or modify
@@ -18,4 +18,12 @@
 
 
 class SubstrateRequestException(Exception):
+    pass
+
+
+class StorageFunctionNotFound(ValueError):
+    pass
+
+
+class ConfigurationError(Exception):
     pass
