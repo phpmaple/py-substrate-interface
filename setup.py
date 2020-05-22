@@ -21,7 +21,8 @@ elif environ.get('CI_COMMIT_TAG'):
 elif environ.get('GITHUB_REF'):
 
     if not environ['GITHUB_REF'].startswith('refs/tags/v'):
-        raise ValueError('Incorrect tag format {}'.format(environ['GITHUB_REF']))
+        raise ValueError(
+            'Incorrect tag format {}'.format(environ['GITHUB_REF']))
 
     version = environ['GITHUB_REF'].replace('refs/tags/v', '')
 else:
@@ -139,7 +140,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    #packages=find_packages(exclude=['contrib', 'docs', 'tests', 'test']),  # Required
+    # packages=find_packages(exclude=['contrib', 'docs', 'tests', 'test']),  # Required
     packages=find_packages(),  # Required
 
     # Specify which Python versions you support. In contrast to the
@@ -148,7 +149,7 @@ setup(
     # do not support Python 2, you can simplify this to '>=3.5' or similar, see
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
 
-    #python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4',
+    # python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4',
     python_requires='>=3.6, <4',
 
     # This field lists other packages that your project depends on to run.
@@ -168,10 +169,9 @@ setup(
         'requests==2.22.0',
         'urllib3==1.25.3',
         'xxhash==1.3.0',
-                      'scalecodec@https://github.com/phpmaple/py-scale-codec/tarball/master#egg=scalecodec'],
+        'scalecodec@https://github.com/phpmaple/py-scale-codec/tarball/master#egg=scalecodec',
         'py-sr25519-bindings>=0.1.1',
-        'py-bip39-bindings>=0.1.2'
-    ],
+        'py-bip39-bindings>=0.1.2'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -182,7 +182,7 @@ setup(
     # Similar to `install_requires` above, these must be valid existing
     # projects.
     extras_require={  # Optional
-        #'dev': ['check-manifest'],
+        # 'dev': ['check-manifest'],
         'test': ['coverage', 'pytest'],
     },
 
