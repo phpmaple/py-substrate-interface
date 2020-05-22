@@ -36,9 +36,8 @@ from .utils.hasher import blake2_256, two_x64_concat, xxh64, xxh128, blake2_128,
 from .exceptions import SubstrateRequestException, ConfigurationError, StorageFunctionNotFound
 from .constants import *
 from .utils.ss58 import ss58_decode, ss58_encode
-from bip39 import bip39_to_mini_secret, new_bip39
+from bip39 import bip39_to_mini_secret, bip39_generate
 import sr25519
-
 
 
 log = logging.getLogger(__name__)
@@ -52,7 +51,8 @@ class Keypair:
             public_key = ss58_decode(ss58_address)
 
         if not public_key:
-            raise ValueError('No SS58 formatted address or public key provided')
+            raise ValueError(
+                'No SS58 formatted address or public key provided')
 
         public_key = '0x{}'.format(public_key.replace('0x', ''))
 
@@ -78,7 +78,7 @@ class Keypair:
 
     @classmethod
     def generate_mnemonic(cls):
-        return new_bip39()
+        return bip39_generate()
 
     @classmethod
     def create_from_mnemonic(cls, mnemonic, address_type=42):
@@ -94,7 +94,8 @@ class Keypair:
 
     @classmethod
     def create_from_seed(cls, seed_hex, address_type=42):
-        keypair = sr25519.pair_from_seed(bytes.fromhex(seed_hex.replace('0x', '')))
+        keypair = sr25519.pair_from_seed(
+            bytes.fromhex(seed_hex.replace('0x', '')))
         public_key = keypair[0].hex()
         private_key = keypair[1].hex()
         ss58_address = ss58_encode(keypair[0], address_type)
@@ -124,10 +125,12 @@ class SubstrateInterface:
 
         if type_registry_preset:
             # Load type registries in runtime configuration
-            RuntimeConfiguration().update_type_registry(load_type_registry_preset("default"))
+            RuntimeConfiguration().update_type_registry(
+                load_type_registry_preset("default"))
 
             if type_registry != "default":
-                RuntimeConfiguration().update_type_registry(load_type_registry_preset(type_registry_preset))
+                RuntimeConfiguration().update_type_registry(
+                    load_type_registry_preset(type_registry_preset))
 
         if type_registry:
             # Load type registries in runtime configuration
@@ -209,11 +212,13 @@ class SubstrateInterface:
                         event_number = 0
                         while not ws_result:
                             result = json.loads(await websocket.recv())
-                            self.debug_message("Websocket result [{}] Received from node: {}".format(event_number, result))
+                            self.debug_message(
+                                "Websocket result [{}] Received from node: {}".format(event_number, result))
 
                             # Check if response has error
                             if 'error' in result:
-                                raise SubstrateRequestException(result['error'])
+                                raise SubstrateRequestException(
+                                    result['error'])
 
                             callback_result = result_handler(result)
                             if callback_result:
@@ -229,12 +234,15 @@ class SubstrateInterface:
         else:
 
             if result_handler:
-                raise ConfigurationError("Result handlers only available for websockets (ws://) connections")
+                raise ConfigurationError(
+                    "Result handlers only available for websockets (ws://) connections")
 
-            response = requests.request("POST", self.url, data=json.dumps(payload), headers=self.default_headers)
+            response = requests.request("POST", self.url, data=json.dumps(
+                payload), headers=self.default_headers)
 
             if response.status_code != 200:
-                raise SubstrateRequestException("RPC request failed with HTTP status code {}".format(response.status_code))
+                raise SubstrateRequestException(
+                    "RPC request failed with HTTP status code {}".format(response.status_code))
 
             json_body = response.json()
 
@@ -304,7 +312,8 @@ class SubstrateInterface:
         if block_id:
             block_hash = self.get_block_hash(block_id)
 
-        response = self.rpc_request("chain_getBlock", [block_hash]).get('result')
+        response = self.rpc_request(
+            "chain_getBlock", [block_hash]).get('result')
 
         if self.mock_extrinsics:
             # Extend extrinsics with mock_extrinsics for e.g. performance tests
@@ -313,7 +322,8 @@ class SubstrateInterface:
         # Decode extrinsics
         if metadata_decoder:
 
-            response['block']['header']['number'] = int(response['block']['header']['number'], 16)
+            response['block']['header']['number'] = int(
+                response['block']['header']['number'], 16)
 
             for idx, extrinsic_data in enumerate(response['block']['extrinsics']):
                 extrinsic_decoder = ExtrinsicsDecoder(
@@ -393,7 +403,8 @@ class SubstrateInterface:
         response = self.rpc_request("state_getMetadata", params)
 
         if decode:
-            metadata_decoder = MetadataDecoder(ScaleBytes(response.get('result')))
+            metadata_decoder = MetadataDecoder(
+                ScaleBytes(response.get('result')))
             metadata_decoder.decode()
 
             return metadata_decoder
@@ -430,7 +441,8 @@ class SubstrateInterface:
             hasher=hasher,
             metadata_version=metadata_version
         )
-        response = self.rpc_request("state_getStorageAt", [storage_hash, block_hash])
+        response = self.rpc_request("state_getStorageAt", [
+                                    storage_hash, block_hash])
 
         if 'result' in response:
 
@@ -444,7 +456,8 @@ class SubstrateInterface:
             else:
                 return response.get('result')
         else:
-            raise SubstrateRequestException("Error occurred during retrieval of events")
+            raise SubstrateRequestException(
+                "Error occurred during retrieval of events")
 
     def get_storage_by_key(self, block_hash, storage_key):
         """
@@ -460,11 +473,13 @@ class SubstrateInterface:
 
         """
 
-        response = self.rpc_request("state_getStorageAt", [storage_key, block_hash])
+        response = self.rpc_request("state_getStorageAt", [
+                                    storage_key, block_hash])
         if 'result' in response:
             return response.get('result')
         else:
-            raise SubstrateRequestException("Error occurred during retrieval of events")
+            raise SubstrateRequestException(
+                "Error occurred during retrieval of events")
 
     def get_block_events(self, block_hash, metadata_decoder=None):
         """
@@ -485,7 +500,8 @@ class SubstrateInterface:
         else:
             storage_hash = STORAGE_HASH_SYSTEM_EVENTS
 
-        response = self.rpc_request("state_getStorageAt", [storage_hash, block_hash])
+        response = self.rpc_request("state_getStorageAt", [
+                                    storage_hash, block_hash])
 
         if response.get('result'):
 
@@ -502,7 +518,8 @@ class SubstrateInterface:
             else:
                 return response
         else:
-            raise SubstrateRequestException("Error occurred during retrieval of events")
+            raise SubstrateRequestException(
+                "Error occurred during retrieval of events")
 
     def get_block_runtime_version(self, block_hash):
         """
@@ -536,7 +553,8 @@ class SubstrateInterface:
         """
 
         if metadata_version and metadata_version >= 9:
-            storage_hash = xxh128(storage_module.encode()) + xxh128(storage_function.encode())
+            storage_hash = xxh128(storage_module.encode()) + \
+                xxh128(storage_function.encode())
 
             if params:
 
@@ -549,7 +567,8 @@ class SubstrateInterface:
                     elif idx == 1:
                         param_hasher = key2_hasher
                     else:
-                        raise ValueError('Unexpected third parameter for storage call')
+                        raise ValueError(
+                            'Unexpected third parameter for storage call')
 
                     params_key = bytes()
 
@@ -582,7 +601,8 @@ class SubstrateInterface:
                         storage_hash += identity(params_key)
 
                     else:
-                        raise ValueError('Unknown storage hasher "{}"'.format(param_hasher))
+                        raise ValueError(
+                            'Unknown storage hasher "{}"'.format(param_hasher))
 
             return '0x{}'.format(storage_hash)
 
@@ -634,39 +654,48 @@ class SubstrateInterface:
         """
 
         if block_id and block_hash:
-            raise ValueError('Cannot provide block_hash and block_id at the same time')
+            raise ValueError(
+                'Cannot provide block_hash and block_id at the same time')
 
         if block_id:
             block_hash = self.get_block_hash(block_id)
 
         self.block_hash = block_hash
 
-        self.runtime_version = self.get_block_runtime_version(block_hash=self.block_hash).get("specVersion")
+        self.runtime_version = self.get_block_runtime_version(
+            block_hash=self.block_hash).get("specVersion")
 
         # Set active runtime version
         RuntimeConfiguration().set_active_spec_version_id(self.runtime_version)
 
         if self.runtime_version not in self.metadata_cache and self.cache_region:
             # Try to retrieve metadata from Dogpile cache
-            cached_metadata = self.cache_region.get('METADATA_{}'.format(self.runtime_version))
+            cached_metadata = self.cache_region.get(
+                'METADATA_{}'.format(self.runtime_version))
             if cached_metadata:
-                self.debug_message('Retrieved metadata for {} from Redis'.format(self.runtime_version))
+                self.debug_message(
+                    'Retrieved metadata for {} from Redis'.format(self.runtime_version))
                 self.metadata_cache[self.runtime_version] = cached_metadata
 
         if self.runtime_version in self.metadata_cache:
             # Get metadata from cache
-            self.debug_message('Retrieved metadata for {} from memory'.format(self.runtime_version))
+            self.debug_message(
+                'Retrieved metadata for {} from memory'.format(self.runtime_version))
             self.metadata_decoder = self.metadata_cache[self.runtime_version]
         else:
-            self.metadata_decoder = self.get_block_metadata(block_hash=self.block_hash, decode=True)
-            self.debug_message('Retrieved metadata for {} from Substrate node'.format(self.runtime_version))
+            self.metadata_decoder = self.get_block_metadata(
+                block_hash=self.block_hash, decode=True)
+            self.debug_message(
+                'Retrieved metadata for {} from Substrate node'.format(self.runtime_version))
 
             # Update metadata cache
             self.metadata_cache[self.runtime_version] = self.metadata_decoder
 
             if self.cache_region:
-                self.debug_message('Stored metadata for {} in Redis'.format(self.runtime_version))
-                self.cache_region.set('METADATA_{}'.format(self.runtime_version), self.metadata_decoder)
+                self.debug_message(
+                    'Stored metadata for {} in Redis'.format(self.runtime_version))
+                self.cache_region.set('METADATA_{}'.format(
+                    self.runtime_version), self.metadata_decoder)
 
     def get_runtime_state(self, module, storage_function, params=None, block_hash=None):
         """
@@ -697,9 +726,11 @@ class SubstrateInterface:
 
                             if 'PlainType' in storage_item.type:
                                 hasher = 'Twox64Concat'
-                                return_scale_type = storage_item.type.get('PlainType')
+                                return_scale_type = storage_item.type.get(
+                                    'PlainType')
                                 if params:
-                                    raise ValueError('Storage call of type "PlainType" doesn\'t accept params')
+                                    raise ValueError(
+                                        'Storage call of type "PlainType" doesn\'t accept params')
 
                             elif 'MapType' in storage_item.type:
 
@@ -708,35 +739,45 @@ class SubstrateInterface:
                                 return_scale_type = map_type.get('value')
 
                                 if not params or len(params) != 1:
-                                    raise ValueError('Storage call of type "MapType" requires 1 parameter')
+                                    raise ValueError(
+                                        'Storage call of type "MapType" requires 1 parameter')
 
                                 # Encode parameter
-                                params[0] = self.convert_storage_parameter(map_type['key'], params[0])
-                                param_obj = ScaleDecoder.get_decoder_class(map_type['key'])
+                                params[0] = self.convert_storage_parameter(
+                                    map_type['key'], params[0])
+                                param_obj = ScaleDecoder.get_decoder_class(
+                                    map_type['key'])
                                 params[0] = param_obj.encode(params[0])
 
                             elif 'DoubleMapType' in storage_item.type:
 
-                                map_type = storage_item.type.get('DoubleMapType')
+                                map_type = storage_item.type.get(
+                                    'DoubleMapType')
                                 hasher = map_type.get('hasher')
                                 key2_hasher = map_type.get('key2Hasher')
                                 return_scale_type = map_type.get('value')
 
                                 if not params or len(params) != 2:
-                                    raise ValueError('Storage call of type "DoubleMapType" requires 2 parameters')
+                                    raise ValueError(
+                                        'Storage call of type "DoubleMapType" requires 2 parameters')
 
                                 # Encode parameter 1
-                                params[0] = self.convert_storage_parameter(map_type['key1'], params[0])
-                                param_obj = ScaleDecoder.get_decoder_class(map_type['key1'])
+                                params[0] = self.convert_storage_parameter(
+                                    map_type['key1'], params[0])
+                                param_obj = ScaleDecoder.get_decoder_class(
+                                    map_type['key1'])
                                 params[0] = param_obj.encode(params[0])
 
                                 # Encode parameter 2
-                                params[1] = self.convert_storage_parameter(map_type['key2'], params[1])
-                                param_obj = ScaleDecoder.get_decoder_class(map_type['key2'])
+                                params[1] = self.convert_storage_parameter(
+                                    map_type['key2'], params[1])
+                                param_obj = ScaleDecoder.get_decoder_class(
+                                    map_type['key2'])
                                 params[1] = param_obj.encode(params[1])
 
                             else:
-                                raise NotImplementedError("Storage type not implemented")
+                                raise NotImplementedError(
+                                    "Storage type not implemented")
 
                             storage_hash = self.generate_storage_hash(
                                 storage_module=metadata_module.prefix,
@@ -747,7 +788,8 @@ class SubstrateInterface:
                                 metadata_version=self.metadata_decoder.version.index
                             )
 
-                            response = self.rpc_request("state_getStorageAt", [storage_hash, block_hash])
+                            response = self.rpc_request("state_getStorageAt", [
+                                                        storage_hash, block_hash])
 
                             if 'result' in response:
 
@@ -761,7 +803,8 @@ class SubstrateInterface:
 
                             return response
 
-        raise StorageFunctionNotFound('Storage function "{}.{}" not found'.format(module, storage_function))
+        raise StorageFunctionNotFound(
+            'Storage function "{}.{}" not found'.format(module, storage_function))
 
     def get_runtime_events(self, block_hash=None):
         """
@@ -799,7 +842,8 @@ class SubstrateInterface:
         response = self.rpc_request("state_getMetadata", params)
 
         if 'result' in response:
-            metadata_decoder = MetadataDecoder(ScaleBytes(response.get('result')))
+            metadata_decoder = MetadataDecoder(
+                ScaleBytes(response.get('result')))
             response['result'] = metadata_decoder.decode()
 
         return response
@@ -821,7 +865,8 @@ class SubstrateInterface:
         """
         self.init_runtime(block_hash=block_hash)
 
-        call = ScaleDecoder.get_decoder_class('Call', metadata=self.metadata_decoder)
+        call = ScaleDecoder.get_decoder_class(
+            'Call', metadata=self.metadata_decoder)
 
         call.encode({
             'call_module': call_module,
@@ -832,7 +877,8 @@ class SubstrateInterface:
         return call
 
     def get_account_nonce(self, account_address):
-        response = self.get_runtime_state('System', 'Account', [account_address])
+        response = self.get_runtime_state(
+            'System', 'Account', [account_address])
         if response.get('result'):
             return response['result'].get('nonce', 0)
 
@@ -843,7 +889,8 @@ class SubstrateInterface:
 
         if self.sub_key:
             if not keypair.mnemonic:
-                raise ConfigurationError('mnemonic must be set on keypair to use subkey')
+                raise ConfigurationError(
+                    'mnemonic must be set on keypair to use subkey')
             return self.sub_key.sign(data, keypair.mnemonic)
 
         else:
@@ -853,10 +900,12 @@ class SubstrateInterface:
                 data = data.encode()
 
             if not keypair.private_key:
-                raise ConfigurationError('private_key must be set on keypair to use sr25519 bindings')
+                raise ConfigurationError(
+                    'private_key must be set on keypair to use sr25519 bindings')
 
             signature = sr25519.sign(
-                (bytes.fromhex(keypair.public_key[2:]), bytes.fromhex(keypair.private_key[2:])),
+                (bytes.fromhex(keypair.public_key[2:]), bytes.fromhex(
+                    keypair.private_key[2:])),
                 data
             )
             return "0x{}".format(signature.hex())
@@ -892,7 +941,8 @@ class SubstrateInterface:
         era = '00'
 
         # Create signature payload
-        signature_payload = ScaleDecoder.get_decoder_class('ExtrinsicPayloadValue')
+        signature_payload = ScaleDecoder.get_decoder_class(
+            'ExtrinsicPayloadValue')
 
         signature_payload.encode({
             'call': str(call.data),
@@ -905,10 +955,12 @@ class SubstrateInterface:
         })
 
         # Sign payload
-        signature = self.sign_data(data=str(signature_payload.data), keypair=keypair)
+        signature = self.sign_data(
+            data=str(signature_payload.data), keypair=keypair)
 
         # Create extrinsic
-        extrinsic = ScaleDecoder.get_decoder_class('Extrinsic', metadata=self.metadata_decoder)
+        extrinsic = ScaleDecoder.get_decoder_class(
+            'Extrinsic', metadata=self.metadata_decoder)
 
         extrinsic.encode({
             'account_id': keypair.public_key,
@@ -929,7 +981,8 @@ class SubstrateInterface:
 
     def create_unsigned_extrinsic(self, call):
         # Create extrinsic
-        extrinsic = ScaleDecoder.get_decoder_class('Extrinsic', metadata=self.metadata_decoder)
+        extrinsic = ScaleDecoder.get_decoder_class(
+            'Extrinsic', metadata=self.metadata_decoder)
 
         extrinsic.encode({
             'call_function': call.value['call_function'],
@@ -982,7 +1035,8 @@ class SubstrateInterface:
             )
         else:
 
-            response = self.rpc_request("author_submitExtrinsic", [str(extrinsic.data)])
+            response = self.rpc_request(
+                "author_submitExtrinsic", [str(extrinsic.data)])
 
             if 'result' not in response:
                 raise SubstrateRequestException(response.get('error'))
@@ -1083,7 +1137,8 @@ class SubstrateInterface:
             type_info["is_primitive_runtime"] = None
             type_info["is_primitive_core"] = None
 
-        self.type_registry_cache[self.runtime_version][type_string.lower()] = type_info
+        self.type_registry_cache[self.runtime_version][type_string.lower(
+        )] = type_info
 
         return decoder_class
 
@@ -1141,9 +1196,12 @@ class SubstrateInterface:
                             type_value = storage.type['MapType'].get('value')
 
                         elif storage.type.get('DoubleMapType'):
-                            type_key1 = storage.type['DoubleMapType'].get('key1')
-                            type_key2 = storage.type['DoubleMapType'].get('key2')
-                            type_value = storage.type['DoubleMapType'].get('value')
+                            type_key1 = storage.type['DoubleMapType'].get(
+                                'key1')
+                            type_key2 = storage.type['DoubleMapType'].get(
+                                'key2')
+                            type_value = storage.type['DoubleMapType'].get(
+                                'value')
 
                         self.process_metadata_typestring(type_value)
 
@@ -1485,9 +1543,11 @@ class SubstrateInterface:
         """
         self.init_runtime(block_hash=block_hash, block_id=block_id)
 
-        response = self.rpc_request("chain_getBlock", [block_hash]).get('result')
+        response = self.rpc_request(
+            "chain_getBlock", [block_hash]).get('result')
 
-        response['block']['header']['number'] = int(response['block']['header']['number'], 16)
+        response['block']['header']['number'] = int(
+            response['block']['header']['number'], 16)
 
         for idx, extrinsic_data in enumerate(response['block']['extrinsics']):
             extrinsic_decoder = ExtrinsicsDecoder(
@@ -1522,7 +1582,8 @@ class SubstrateInterface:
         """
         self.init_runtime(block_hash=block_hash)
 
-        obj = ScaleDecoder.get_decoder_class(type_string, ScaleBytes(scale_bytes), metadata=self.metadata_decoder)
+        obj = ScaleDecoder.get_decoder_class(type_string, ScaleBytes(
+            scale_bytes), metadata=self.metadata_decoder)
         return obj.decode()
 
     def encode_scale(self, type_string, value, block_hash=None):
@@ -1689,11 +1750,11 @@ class SubstrateInterface:
             "event_id": event.name,
             "event_name": event.name,
             "event_args": [
-                  {
+                {
                     "event_arg_index": idx,
                     "type": arg
-                  } for idx, arg in enumerate(event.args)
-                ],
+                } for idx, arg in enumerate(event.args)
+            ],
             "lookup": '0x{}'.format(event_index),
             "documentation": '\n'.join(event.docs),
             "module_id": module.get_identifier(),
